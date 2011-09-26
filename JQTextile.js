@@ -1,6 +1,6 @@
 /***************************************
 *
-*	Much of this code is based on the JavaScript Textile project created by ben@ben-daglish.net http://www.ben-daglish.net/textile.shtml
+*	The textile conversion functions were originally based on the JavaScript Textile project created by ben@ben-daglish.net http://www.ben-daglish.net/textile.shtml
 *
 ****************************************/
 
