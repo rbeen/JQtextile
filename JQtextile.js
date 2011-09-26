@@ -8,29 +8,29 @@
 
 	$.fn.JQtextile = function(textile_string) {
 
-		var inpr;
-		var inbq;
-		var inbqq;
-		var html;
+		var alg = {'>':'right','<':'left','=':'center','<>':'justify','~':'bottom','^':'top'};
 		var aliases = new Array;
-		var alg={'>':'right','<':'left','=':'center','<>':'justify','~':'bottom','^':'top'};
-		var ent={"'":"&#8217;"," - ":" &#8211; ","--":"&#8212;"," x ":" &#215; ","\\.\\.\\.":"&#8230;","\\(C\\)":"&#169;","\\(R\\)":"&#174;","\\(TM\\)":"&#8482;"};
-		var tags={"b":"\\*\\*","i":"__","em":"_","strong":"\\*","cite":"\\?\\?","sup":"\\^","sub":"~","span":"\\%","del":"-","code":"@","ins":"\\+","del":"-"};
-		var le="\n\n";
-		var lstlev=0,lst="",elst="",intable=0,mm="";
+		var bq = /^bq\.(\.)?\s*/;
+		var elst = "";
+		var ent = {"'":"&#8217;"," - ":" &#8211; ","--":"&#8212;"," x ":" &#215; ","\\.\\.\\.":"&#8230;","\\(C\\)":"&#169;","\\(R\\)":"&#174;","\\(TM\\)":"&#8482;"};
+		var html = "";
+		var inbq = 0;
+		var inbqq = 0;
+		var inpr = 0;
+		var intable = 0;
+		var le = "\n\n";
+		var lst = "";
+		var lstlev = 0;
+		var mm = "";
 		var para = /^p(\S*)\.\s*(.*)/;
 		var rfn = /^fn(\d+)\.\s*(.*)/;
-		var bq = /^bq\.(\.)?\s*/;
-		var table=/^table\s*{(.*)}\..*/;
+		var table = /^table\s*{(.*)}\..*/;
+		var tags = {"b":"\\*\\*","i":"__","em":"_","strong":"\\*","cite":"\\?\\?","sup":"\\^","sub":"~","span":"\\%","del":"-","code":"@","ins":"\\+","del":"-"};
 		var trstyle = /^\{(\S+)\}\.\s*\|/;
 
 		function convert(t) {
 
 			var lines = t.split(/\r?\n/);
-
-			html="";
-
-			inpr=inbq=inbqq=0;
 
 			for(var i=0;i<lines.length;i++) {
 				if(lines[i].indexOf("[") == 0) {
