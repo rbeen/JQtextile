@@ -11,7 +11,7 @@
 <link rel="stylesheet" href="http://twitter.github.com/bootstrap/1.3.0/bootstrap.min.css">
 
 <script src="js/jquery-1.6.4.min.js"></script>
-<script src="JQtextile.min.js"></script>
+<script src="JQtextile.js"></script>
 
 </head>
 
@@ -37,27 +37,49 @@
 
 		<h2>Demonstration</h2>
 
-		<p>Here you can see an example of JQtextile in action. The input here is taken from the contents of an element, but could just as easily be a string of text extracted from a JSON object.</p>
+		<p>Here you can see an example of JQtextile in action (including some aspects that don't work yet). The input here is taken from the contents of an element, but could just as easily be a string of text extracted from a JSON object.</p>
 
 		<p>Plain text input:</p>
 
 <pre id="textile_source">
 
-h1. Lorem ipsum
+h1. Level One Heading
 
-+Lorem ipsum+ *dolor sit amet*, _consectetur adipiscing_ elit. Pellentesque -varius porta- porta. Nullam rutrum, %{color:red}mi vel dignissim mattis%, purus lacus ultrices purus, et suscipit nibh elit non magna. Mauris dapibus cursus sapien, in ultricies elit adipiscing eget. 
+Some +inserted (underlined) text+, *strong (bold) text*, _emphasized (italic) text_, -deleted (struck through) text-, %{color:red}colorful text%, %{font-size:18pt}bigger text%, super-script ^text^, sub-script ~text~. 
+
+bq. A piece of block quoted text, including a reference to a footnote[1]
+
+Quotes to 'curley quotes', text with a ??citation??, text with some @code@, text with an elipsis..., text with an em--dash, text with an en-dash, text with a 2 x 2 dimension, text with Trademarks(TM), and(R) copyright symbols(C), text surrounded by a %span%.
+
+These don't work yet: *_bold italic text_*, *-bold struck through text-*, *_-bold italic struck through text-_*, *+bolder underlined text+*, _+italic underlined text+_, *_+bold italic underlined text+_*, *_+-bold italic underlined struck through text-+_*.
+
+fn1. This is a footnote.
+
+h2. Level two heading
 
 * "Curabitur pretium":http://notreadbyhumans.github.com/JQtextile/ diam vitae mi aliquet non cursus risus posuere;
 * Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos;
 * Donec bibendum fermentum dolor.
+** Donec bibendum fermentum dolor.
+** Donec bibendum fermentum dolor.
+*** Donec bibendum fermentum dolor.
+*** Donec bibendum fermentum dolor.
 
 Quisque fermentum, urna sit amet posuere interdum, tellus mauris tincidunt odio, vitae lacinia orci diam tempor dolor.
 
 # One
 # Two
 # Three
+## Three point one
+## Three point two
+### Three point two point one
+### Three point two point two
 
-h2. Quisque fermentum
+h3. Level three heading
+
+!http://notreadbyhumans.github.com/JQtextile/images/octocat.png!
+
+h4. Level four heading
 
 Etiam massa sapien, pharetra id tempus ac, congue in purus. Donec egestas lacinia ligula, elementum dapibus massa pellentesque eu. Nunc mauris neque, egestas blandit faucibus eu, malesuada ut ipsum. Nulla fringilla condimentum libero. Cras suscipit, enim eu semper aliquam, sem velit ultrices lorem, nec interdum massa est eget sem. Vestibulum fringilla iaculis laoreet. Mauris sem libero, tristique eget commodo sed, laoreet sit amet velit. Vestibulum sollicitudin, libero sit amet laoreet luctus, est augue posuere diam, ac blandit magna felis nec eros. 
 
@@ -67,9 +89,9 @@ Etiam massa sapien, pharetra id tempus ac, congue in purus. Donec egestas lacini
 
 </pre>
 
-		<p>Executing the JQtextile conversion:</p>
+		<p>Executing the JQtextile conversion - <b>Textile in, HTML out</b>:</p>
 
-		<pre>$('#textile_destination').JQtextile(textile_string);</pre>
+		<pre>$('#textile_destination').JQtextile('out', textile_string);</pre>
 
 		<p>Output:</p>
 
@@ -81,7 +103,7 @@ Etiam massa sapien, pharetra id tempus ac, congue in purus. Donec egestas lacini
 
 			var textile_string = $('#textile_source').html();
 
-			$('#textile_destination').JQtextile(textile_string);
+			$('#textile_destination').JQtextile('out', textile_string);
 
 		</script>
 
