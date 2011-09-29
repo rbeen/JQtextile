@@ -57,7 +57,7 @@ fn1. This is a footnote.
 
 h2. Level two heading
 
-* "Curabitur pretium":http://notreadbyhumans.github.com/JQtextile/ diam vitae mi aliquet non cursus risus posuere;
+* "A link to another page":http://notreadbyhumans.github.com/JQtextile/ diam vitae mi aliquet non cursus risus posuere;
 * Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos;
 * Donec bibendum fermentum dolor.
 ** Donec bibendum fermentum dolor.
@@ -67,13 +67,15 @@ h2. Level two heading
 
 Quisque fermentum, urna sit amet posuere interdum, tellus mauris tincidunt odio, vitae lacinia orci diam tempor dolor.
 
-# One
-# Two
-# Three
+# "Aliased URL One":JQtextile
+# "Aliased URL Two":JQtextile
+# "Aliased URL Three":JQtextile
 ## Three point one
 ## Three point two
 ### Three point two point one
 ### Three point two point two
+
+[JQtextile]http://notreadbyhumans.github.com/JQtextile/
 
 h3. Level three heading
 
@@ -91,7 +93,7 @@ Etiam massa sapien, pharetra id tempus ac, congue in purus. Donec egestas lacini
 
 		<p>Executing the JQtextile conversion - <b>Textile in, HTML out</b>:</p>
 
-		<pre>$('#textile_destination').JQtextile('out', textile_string);</pre>
+		<pre>$('#textile_destination').JQtextile('textile', textile_string);</pre>
 
 		<p>Output:</p>
 
@@ -103,7 +105,7 @@ Etiam massa sapien, pharetra id tempus ac, congue in purus. Donec egestas lacini
 
 			var textile_string = $('#textile_source').html();
 
-			$('#textile_destination').JQtextile('out', textile_string);
+			$('#textile_destination').JQtextile('textile', textile_string);
 
 		</script>
 

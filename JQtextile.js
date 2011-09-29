@@ -8,168 +8,472 @@
 
 	var methods = {
 		init : function(options){},
-		in : function(textile_string) { 
+		html : function(textile_string) {
 			// From HTML to textile, to be completed
 			return this.html(textile_string);
 		},
-		out : function(textile_string) {
+		textile : function(textile_string) {
 
-			var alg = {'>':'right','<':'left','=':'center','<>':'justify','~':'bottom','^':'top'};
-			var aliases = new Array;
-			var bq = /^bq\.(\.)?\s*/;
-			var elst = "";
-			var ent = {"'":"&#8217;"," - ":" &#8211; ","--":"&#8212;"," x ":" &#215; ","\\.\\.\\.":"&#8230;","\\(C\\)":"&#169;","\\(R\\)":"&#174;","\\(TM\\)":"&#8482;"};
-			var html = "";
-			var inbq = 0;
-			var inbqq = 0;
-			var inpr = 0;
-			var intable = 0;
-			var le = "\n\n";
-			var lst = "";
-			var lstlev = 0;
-			var mm = "";
-			var para = /^p(\S*)\.\s*(.*)/;
-			var rfn = /^fn(\d+)\.\s*(.*)/;
-			var table = /^table\s*{(.*)}\..*/;
-			var tags = {"b":"\\*\\*","i":"__","em":"_","strong":"\\*","cite":"\\?\\?","sup":"\\^","sub":"~","span":"\\%","del":"-","code":"@","ins":"\\+","del":"-"};
-			var trstyle = /^\{(\S+)\}\.\s*\|/;
+			var alignment_dictionary = {'>':'right','<':'left','=':'center','<>':'justify','~':'bottom','^':'top'};
+			var in_blockqoute = 0;
+			var in_blockqoute_quote = 0;
+			var in_paragraph = 0;
+			var line_end = "\n\n";
+			var output_string = "";
+			var url_aliases = [];
 
-			function convert(t) {
+			//Close off any multiline constructs
+			function close_multiline(is_closed){
+				if(is_closed){
+					in_blockqoute_quote = 0;
+				}
+				if(in_paragraph){
+					output_string += "<\/p>" + line_end;
+					in_paragraph = 0;
+				}
+				if(in_blockqoute && !in_blockqoute_quote){
+					output_string += "<\/blockquote>" + line_end;
+					in_blockqoute = 0;
+				}
+			}
 
-				var lines = t.split(/\r?\n/);
+			function set_attribute(a,v){
+				return ' ' + a + '="' + v + '"';
+			}
 
+			//Add any attributes to the current tag
+			function make_attributes(this_string) {
+
+				var this_style = "";
+				var this_attribute = "";
+
+				//If the string is empty then return
+				if(!this_string){
+					return "";
+				}
+
+				//Has the language been specified for this tag?
+				var this_language = /\[(\w\w)\]/.exec(this_string);
+				if(this_language !== null) {
+					this_attribute += set_attribute('lang', this_language[1]);
+				}
+
+				//Has a combined class and ID been specified?
+				var class_id = /\((\S+)\)/.exec(this_string);
+				if(class_id !== null) {
+					this_string = this_string.replace(/\((\S+)\)/,"");
+					this_attribute += class_id[1].replace(/#(.*)$/,' id="$1"').replace(/^(\S+)/,' class="$1"');
+				}
+
+				//Has the block alignment been specified?
+				var block_alignment = /(<>|=|<|>)/.exec(this_string);
+				if(block_alignment){
+					this_style += "text-align:" + alignment_dictionary[block_alignment[1]] + ";";
+				}
+				
+				//Have any style settings been specified
+				var style_settings = /\{(\S+)\}/.exec(this_string);
+				if(style_settings){
+					this_style += style_settings[1];
+					if(!style_settings[1].match(/;$/)){
+						this_style += ";";
+					}
+				}
+
+				//Has an left padding be specified?
+				var left_padding = /(\(+)/.exec(this_string);
+				if(left_padding){
+					this_style += "padding-left:" + left_padding[1].length + "em;";
+				}
+
+				//Has any right padding been specified?
+				var right_padding = /(\)+)/.exec(this_string);
+				if(right_padding){
+					this_style += "padding-right:" + right_padding[1].length + "em;";
+				}
+
+				//If there are style attributes specified then set them
+				if(this_style) {
+					this_attribute += set_attribute('style',this_style);
+				}
+
+				return this_attribute;
+
+			}
+
+
+			function set_tag(t,a,c) {
+				return "<" + t + a + ">" + c + "</" + t + ">";
+			}
+
+
+			//Create the img tag
+			function make_image(item,this_regex) {
+
+				var this_image = this_regex.exec(item);
+
+				if(this_image !== null) {
+					
+					//If the image has any attributes then set them
+					var this_attribute = "";
+					var image_attributes = /\((.*)\)$/.exec(this_image[1]);
+					if(image_attributes !== null) {
+						this_attribute = set_attribute('alt',image_attributes[1]) + set_attribute("title",image_attributes[1]);
+						this_image[1] = this_image[1].replace(/\((.*)\)$/,"");
+					}
+
+					//If the image has any styles then set them
+					var this_style="";
+					if(this_image[1].match(/^[><]/)) {
+						this_style = "float:"+((this_image[1].indexOf(">") === 0)?"right;":"left;");
+						this_image[1] = this_image[1].replace(/^[><]/,"");
+					}
+					
+					var left_padding = /(\(+)/.exec(this_image[1]);
+					if(left_padding){
+						this_style += "padding-left:" + left_padding[1].length + "em;";
+					}
+
+					var right_padding = /(\)+)/.exec(this_image[1]);
+					if(right_padding){
+						this_style += "padding-right:" + right_padding[1].length + "em;";
+					}
+
+					//Add the styles to the attributes
+					if(this_style){
+						this_attribute += set_attribute('style', this_style);
+					}
+
+					//Build the img tag
+					var made_image = '<img src="' + this_image[1] + '"' + this_attribute + " />";
+
+					//If this image has a url then set it
+					if(this_image.length > 2) {
+						made_image = set_tag('a',set_attribute('href',this_image[2]),made_image);
+					}
+
+					item = item.replace(this_regex,made_image);
+
+				}
+
+				return item;
+			}
+
+			function make_tag(this_string, this_regex, this_tag, spacer) {
+
+				//Iterate through the string until all the tags are set
+				var item ="";
+				item = this_regex.exec(this_string);
+				while(item) {
+
+					//Set the attributes
+					var these_attributes = make_attributes(item[1]);
+
+					//Clean up the item
+					item[1] = item[1].replace(/^[\[\{\(]\S+[\]\}\)]/g,"");
+					item[1] = item[1].replace(/^[<>=()]+/,"");
+
+					//Put it back together
+					this_string = this_string.replace(this_regex, spacer + set_tag(this_tag, these_attributes, item[1]) );
+
+					//Reset item
+					item = this_regex.exec(this_string);
+
+				}
+				return this_string;
+			}
+
+			function set_contents(item){
+
+				var entity_dictionary = {"'":"&#8217;"," - ":" &#8211; ","--":"&#8212;"," x ":" &#215; ","\\.\\.\\.":"&#8230;","\\(C\\)":"&#169;","\\(R\\)":"&#174;","\\(TM\\)":"&#8482;"};
+				var tag_dictionary = {"b":"\\*\\*","i":"__","em":"_","strong":"\\*","cite":"\\?\\?","sup":"\\^","sub":"~","span":"\\%","code":"@","ins":"\\+","del":"-"};
+
+				//For each entity in the entity dictionary replace
+				var entity = "";
+				for(entity in entity_dictionary) {
+					if (entity_dictionary.hasOwnProperty(entity)) {
+						item = item.replace(new RegExp(entity,"g"),entity_dictionary[entity]);
+					}
+				}
+
+				//For each tag in the tag dictionary replace
+				var tag = "";
+				for(tag in tag_dictionary) {
+					if (tag_dictionary.hasOwnProperty(tag)) {
+						item = make_tag(item,RegExp("^" + tag_dictionary[tag] + "(.+?)" + tag_dictionary[tag]), tag, "");
+						item = make_tag(item,RegExp(" " + tag_dictionary[tag] + "(.+?)" + tag_dictionary[tag]), tag, " ");
+					}
+				}
+
+				//Set superscript
+				item = item.replace(/\[(\d+)\]/g,'<sup><a href="#fn$1">$1<\/a><\/sup>');
+
+				//Set acronyms
+				item = item.replace(/([A-Z]+)\((.*?)\)/g,'<acronym title="$2">$1<\/acronym>');
+
+				//Set anchors
+				item = item.replace(/\"([^\"]+)\":((http|https|mailto):\S+)/g,'<a href="$2">$1<\/a>');
+
+				//Set images with links
+				item = make_image(item,/!([^!\s]+)!:(\S+)/);
+
+				//Set plain images
+				item = make_image(item,/!([^!\s]+)!/);
+
+				//Set url aliases
+				item = item.replace(/"([^\"]+)":(\S+)/g,function($0,$1,$2){
+					return set_tag("a",set_attribute('href',url_aliases[$2]),$1);
+				});
+
+				//Set the double quotes
+				item = item.replace(/(=)?"([^\"]+)"/g,function($0,$1,$2){
+					return ($1)?$0:"&#8220;"+$2+"&#8221;";
+				});
+
+				return item;
+			}
+
+
+			//Main
+			function convert(this_string) {
+
+				var block_quotes = /^bq\.(\.)?\s*/;
+				var footnote = /^fn(\d+)\.\s*(.*)/;
+				var in_table = 0;
+				var list_end = "";
+				var list_level = 0;
+				var list_start = "";
+				var para_regex = /^p(\S*)\.\s*(.*)/;
+				var table_regex = /^table\s*\{(.*)\}\..*/;
+				var table_row_style = /^\{(\S+)\}\.\s*\|/;
+
+				//Convert the textile string into an array of lines.
+				var lines = this_string.split(/\r?\n/);
+
+				//For each line in the textile string, check to see if it is a URL alias.
+				//If is then push it into the aliases array.
+				//Giving it the label as the key
+				//Trimming off the alias label
 				for(var i=0;i<lines.length;i++) {
-					if(lines[i].indexOf("[") == 0) {
-						var m = lines[i].indexOf("]");
-						aliases[lines[i].substring(1,m)]=lines[i].substring(m+1);
+					if(lines[i].indexOf("[") === 0) {
+						var this_label_end = lines[i].indexOf("]");
+						var this_label = lines[i].substring(1, this_label_end);
+						var this_url = lines[i].substring(this_label_end + 1);
+						url_aliases[this_label] = this_url;
 					}
 				}
 
+				//For each line in the textile string...
 				for(i=0;i<lines.length;i++) {
-					if (lines[i].indexOf("[") == 0) {continue;}
-					if(mm=para.exec(lines[i])){stp(1);inpr=1;html += lines[i].replace(para,"<p"+make_attr(mm[1])+">"+prep(mm[2]));continue;}
-					if(mm = /^h(\d)(\S*)\.\s*(.*)/.exec(lines[i])){stp(1);html += tag("h"+mm[1],make_attr(mm[2]),prep(mm[3]))+le;continue;}
-					if(mm=rfn.exec(lines[i])){stp(1);inpr=1;html+=lines[i].replace(rfn,'<p id="fn'+mm[1]+'"><sup>'+mm[1]+'<\/sup>'+prep(mm[2]));continue;}
-					if (lines[i].indexOf("*") == 0) {lst="<ul>";elst="<\/ul>";}
-					else if (lines[i].indexOf("#") == 0) {lst="<\ol>";elst="<\/ol>";}
-					else {while (lstlev > 0) {html += elst;if(lstlev > 1){html += "<\/li>";}else{html+="\n";}html+="\n";lstlev--;}lst="";}
-					if(lst) {
-						stp(1);
-						var m = /^([*#]+)\s*(.*)/.exec(lines[i]);
-						var lev = m[1].length;
-						while(lev < lstlev) {html += elst+"<\/li>\n";lstlev--;}
-						while(lstlev < lev) {html=html.replace(/<\/li>\n$/,"\n");html += lst;lstlev++;}
-						html += tag("li","",prep(m[2]))+"\n";
+
+					var this_item = "";
+
+					//If there is a [ at index 0 then skip this loop because it assumed to be a URL alias.
+					if (lines[i].indexOf("[") === 0){
 						continue;
 					}
-					if (lines[i].match(table)){stp(1);intable=1;html += lines[i].replace(table,'<table style="$1;">\n');continue;}
-					if ((lines[i].indexOf("|") == 0)  || (lines[i].match(trstyle)) ) {
-						stp(1);
-						if(!intable) {html += "<table>\n";intable=1;}
-						var rowst="";var trow="";
-						var ts=trstyle.exec(lines[i]);
-						if(ts){rowst=qat('style',ts[1]);lines[i]=lines[i].replace(trstyle,"\|");}
-						var cells = lines[i].split("|");
-						for(j=1;j<cells.length-1;j++) {
-							var ttag="td";
-							if(cells[j].indexOf("_.")==0) {ttag="th";cells[j]=cells[j].substring(2);}
-							cells[j]=prep(cells[j]);
-							var al=/^([<>=^~\/\\\{]+.*?)\.(.*)/.exec(cells[j]);
-							var at="",st="";
-							if(al != null) {
-								cells[j]=al[2];
-								var cs= /\\(\d+)/.exec(al[1]);if(cs != null){at +=qat('colspan',cs[1]);}
-								var rs= /\/(\d+)/.exec(al[1]);if(rs != null){at +=qat('rowspan',rs[1]);}
-								var va= /([\^~])/.exec(al[1]);if(va != null){st +="vertical-align:"+alg[va[1]]+";";}
-								var ta= /(<>|=|<|>)/.exec(al[1]);if(ta != null){st +="text-align:"+alg[ta[1]]+";";}
-								var is= /\{([^\}]+)\}/.exec(al[1]);if(is != null){st +=is[1];}
-								if(st != ""){at+=qat('style',st);}					
+
+					//If the line contains a block attribute then tag it and continue
+					this_item = para_regex.exec(lines[i]);
+					if(this_item){
+						close_multiline(1);
+						in_paragraph = 1;
+						output_string += lines[i].replace(para_regex, "<p" + make_attributes(this_item[1]) + ">" + set_contents(this_item[2]));
+						continue;
+					}
+
+					//If this line contains a heading then tag it and continue
+					this_item = /^h(\d)(\S*)\.\s*(.*)/.exec(lines[i]);
+					if(this_item){
+						close_multiline(1);
+						output_string += set_tag("h" + this_item[1], make_attributes(this_item[2]), set_contents(this_item[3]) ) + line_end;
+						continue;
+					}
+
+					//Footnotes
+					this_item = footnote.exec(lines[i]);
+					if(this_item){
+						close_multiline(1);
+						in_paragraph = 1;
+						output_string += lines[i].replace(footnote,'<p id="fn' + this_item[1] + '"><sup>' + this_item[1] + '<\/sup>' + set_contents(this_item[2]));
+						continue;
+					}
+
+					//Set the lists
+					if (lines[i].indexOf("*") === 0) {
+						list_start="<ul>";
+						list_end="<\/ul>";
+					}else if (lines[i].indexOf("#") === 0) {
+						list_start="<ol>";
+						list_end="<\/ol>";
+					}else {
+						while (list_level > 0) {
+							output_string += list_end;
+							if(list_level > 1){
+								output_string += "<\/li>";
+							}else{
+								output_string+="\n";
 							}
-							trow += tag(ttag,at,cells[j]);
+							output_string += "\n";
+							list_level--;
+
 						}
-						html += "\t"+tag("tr",rowst,trow)+"\n";
+						list_start="";
+					}
+
+					//Nest the lists
+					if(list_start) {
+						close_multiline(1);
+						var item = /^([*#]+)\s*(.*)/.exec(lines[i]);
+						var this_level = item[1].length;
+						while(this_level < list_level) {
+							output_string += list_end + "<\/li>\n";
+							list_level--;
+						}
+						while(list_level < this_level) {
+							output_string = output_string.replace(/<\/li>\n$/,"\n");
+							output_string += list_start;
+							list_level++;
+						}
+						output_string += set_tag("li","",set_contents(item[2]))+"\n";
 						continue;
 					}
-					if(intable) {html += "<\/table>"+le;intable=0;}
 
-					if (lines[i]=="") {stp();}
-					else if (!inpr) {
-						if(mm=bq.exec(lines[i])){lines[i]=lines[i].replace(bq,"");html +="<blockquote>";inbq=1;if(mm[1]) {inbqq=1;}}
-						html += "<p>"+prep(lines[i]);inpr=1;
+					//Set the tables
+					if (lines[i].match(table_regex)){
+						close_multiline(1);
+						in_table=1;
+						output_string += lines[i].replace(table_regex,'<table style="$1;">\n');
+						continue;
 					}
-					else {html += prep(lines[i]);}
+
+					//Table rows
+					if ((lines[i].indexOf("|") === 0) || (lines[i].match(table_row_style)) ) {
+
+						close_multiline(1);
+
+						if(!in_table) {
+							output_string += "<table>\n";
+							in_table=1;
+						}
+
+						var this_row_style = "";
+						var table_row = "";
+
+						//Set the row style
+						var row_style = table_row_style.exec(lines[i]);
+						if(row_style){
+							this_row_style = set_attribute('style',row_style[1]);
+							lines[i] = lines[i].replace(table_row_style,"|");
+						}
+
+						//For each cell in the row
+						var table_cells = lines[i].split("|");
+
+						for( var j = 1; j < table_cells.length-1; j++ ) {
+
+							var table_tag = "td";
+							
+							//If this is the heading then swap to the heading tag
+							if(table_cells[j].indexOf("_.") === 0) {
+								table_tag = "th";
+								table_cells[j] = table_cells[j].substring(2);
+							}
+
+							table_cells[j] = set_contents(table_cells[j]);
+
+							var attribute_list = /\^([<>=\^~\/\\\{]+.*?)\.(.*)/.exec(table_cells[j]);
+
+							var cell_attributes = "";
+							var this_style = "";
+
+							if(attribute_list !== null) {
+
+								table_cells[j] = attribute_list[2];
+
+								//Set the cell style
+								var col_span = /\\(\d+)/.exec(attribute_list[1]);
+								if(col_span !== null){
+									cell_attributes += set_attribute('colspan',col_span[1]);
+								}
+
+								//Set the rowspan
+								var row_span = /\/(\d+)/.exec(attribute_list[1]);
+								if(row_span !== null){
+									cell_attributes += set_attribute('rowspan',row_span[1]);
+								}
+
+								//Set the vertical alignment
+								var vertical_align = /([\^~])/.exec(attribute_list[1]);
+								if(vertical_align !== null){
+									this_style += "vertical-align:" + alignment_dictionary[vertical_align[1]] + ";";
+								}
+
+								//Set the text alignment
+								var text_align = /(<>|=|<|>)/.exec(attribute_list[1]);
+								if(text_align !== null){
+									this_style += "text-align:" + alignment_dictionary[text_align[1]] + ";";
+								}
+
+								//Set any block attributes
+								var block_attributes = /\{([^\}]+)\}/.exec(attribute_list[1]);
+								if(block_attributes !== null){
+									this_style += block_attributes[1];
+								}
+
+								//Add any set style attributes
+								if(this_style !== ""){
+									cell_attributes += set_attribute('style',this_style);
+								}
+											
+							}
+
+							//Build the row
+							table_row += set_tag(table_tag,cell_attributes,table_cells[j]);
+
+						}
+
+						output_string += "\t" + set_tag("tr", this_row_style, table_row) + "\n";
+
+						continue;
+
+					}
+
+					//Close any outstanding tables
+					if(in_table) {
+						output_string += "<\/table>" + line_end;
+						in_table = 0;
+					}
+
+					//If its an empty line then close any open multiline constructs
+					if (lines[i] === "") {
+						close_multiline();
+					}else if (!in_paragraph) {
+						this_item = block_quotes.exec(lines[i]);
+						if(this_item){
+							lines[i] = lines[i].replace(block_quotes,"");
+							output_string += "<blockquote>";
+							in_blockqoute = 1;
+							if(this_item[1]) {
+								in_blockqoute_quote = 1;
+							}
+						}
+						output_string += "<p>" + set_contents(lines[i]);
+						in_paragraph = 1;
+					} else {
+						output_string += set_contents(lines[i]);
+					}
 				}
-				stp();
-				return html;
+
+				//Tidy up any open multiline constructs
+				close_multiline();
+
+				return output_string;
+
 			}
-
-			function prep(m){
-				for(i in ent) {m=m.replace(new RegExp(i,"g"),ent[i]);}
-				for(i in tags) {
-					m = make_tag(m,RegExp("^"+tags[i]+"(.+?)"+tags[i]),i,"");
-					m = make_tag(m,RegExp(" "+tags[i]+"(.+?)"+tags[i]),i," ");
-				}
-				m=m.replace(/\[(\d+)\]/g,'<sup><a href="#fn$1">$1<\/a><\/sup>');
-				m=m.replace(/([A-Z]+)\((.*?)\)/g,'<acronym title="$2">$1<\/acronym>');
-				m=m.replace(/\"([^\"]+)\":((http|https|mailto):\S+)/g,'<a href="$2">$1<\/a>');
-				m = make_image(m,/!([^!\s]+)!:(\S+)/);
-				m = make_image(m,/!([^!\s]+)!/);
-				m=m.replace(/"([^\"]+)":(\S+)/g,function($0,$1,$2){return tag("a",qat('href',aliases[$2]),$1)});
-				m=m.replace(/(=)?"([^\"]+)"/g,function($0,$1,$2){return ($1)?$0:"&#8220;"+$2+"&#8221;"});
-				return m;
-			}
-
-			function make_tag(s,re,t,sp) {
-				while(m = re.exec(s)) {
-					var st = make_attr(m[1]);
-					m[1]=m[1].replace(/^[\[\{\(]\S+[\]\}\)]/g,"");
-					m[1]=m[1].replace(/^[<>=()]+/,"");
-					s = s.replace(re,sp+tag(t,st,m[1]));
-				}
-				return s;
-			}
-
-			function make_image(m,re) {
-				var ma = re.exec(m);
-				if(ma != null) {
-					var attr="";var st="";
-					var at = /\((.*)\)$/.exec(ma[1]);
-					if(at != null) {attr = qat('alt',at[1])+qat("title",at[1]);ma[1]=ma[1].replace(/\((.*)\)$/,"");}
-					if(ma[1].match(/^[><]/)) {st = "float:"+((ma[1].indexOf(">")==0)?"right;":"left;");ma[1]=ma[1].replace(/^[><]/,"");}
-					var pdl = /(\(+)/.exec(ma[1]);if(pdl){st+="padding-left:"+pdl[1].length+"em;";}
-					var pdr = /(\)+)/.exec(ma[1]);if(pdr){st+="padding-right:"+pdr[1].length+"em;";}
-					if(st){attr += qat('style',st);}
-					var im = '<img src="'+ma[1]+'"'+attr+" />";
-					if(ma.length >2) {im=tag('a',qat('href',ma[2]),im);}
-					m = m.replace(re,im);
-				}
-				return m;
-			}
-
-			function make_attr(s) {
-				var st="";var at="";
-				if(!s){return "";}
-				var l=/\[(\w\w)\]/.exec(s);
-				if(l != null) {at += qat('lang',l[1]);}
-				var ci=/\((\S+)\)/.exec(s);
-				if(ci != null) {
-					s = s.replace(/\((\S+)\)/,"");
-					at += ci[1].replace(/#(.*)$/,' id="$1"').replace(/^(\S+)/,' class="$1"');
-				}
-				var ta= /(<>|=|<|>)/.exec(s);if(ta){st +="text-align:"+alg[ta[1]]+";";}
-				var ss=/\{(\S+)\}/.exec(s);if(ss){st += ss[1];if(!ss[1].match(/;$/)){st+= ";";}}
-				var pdl = /(\(+)/.exec(s);if(pdl){st+="padding-left:"+pdl[1].length+"em;";}
-				var pdr = /(\)+)/.exec(s);if(pdr){st+="padding-right:"+pdr[1].length+"em;";}
-				if(st) {at += qat('style',st);}
-				return at;
-			}
-
-			function qat(a,v){return ' '+a+'="'+v+'"';}
-			function tag(t,a,c) {return "<"+t+a+">"+c+"</"+t+">";}
-			function stp(b){if(b){inbqq=0;}if(inpr){html+="<\/p>"+le;inpr=0;}if(inbq && !inbqq){html+="<\/blockquote>"+le;inbq=0;}}
-
+			
 			return this.html(convert(textile_string));
-			  	
+	
 	    }
 	};
 
