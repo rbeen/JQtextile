@@ -236,7 +236,6 @@
 
 			//Main
 			function convert(this_string) {
-
 				var block_quotes = /^bq\.(\.)?\s*/;
 				var footnote = /^fn(\d+)\.\s*(.*)/;
 				var in_table = 0;
@@ -249,7 +248,6 @@
 
 				//Convert the textile string into an array of lines.
 				var lines = this_string.split(/\r?\n/);
-
 				//For each line in the textile string, check to see if it is a URL alias.
 				//If is then push it into the aliases array.
 				//Giving it the label as the key
@@ -461,7 +459,7 @@
 						output_string += "<p>" + set_contents(lines[i]);
 						in_paragraph = 1;
 					} else {
-						output_string += set_contents(lines[i]);
+						output_string += '<br>' + set_contents(lines[i]);
 					}
 				}
 
